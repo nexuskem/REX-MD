@@ -1,0 +1,26 @@
+# Environment secrets — NEVER commit these
+.env
+
+# WhatsApp session files (stored in MongoDB instead, but keep local fallback out of git)
+session/
+auth_info_baileys/
+
+# Temporary downloaded files
+temp/
+
+# Node modules
+node_modules/
+
+# pm2 logs
+logs/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
+# Build artifacts
+*.log

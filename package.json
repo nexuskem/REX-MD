@@ -1,0 +1,47 @@
+{
+  "name": "rex-md",
+  "version": "1.0.0",
+  "description": "REX-MD — Modern WhatsApp assistant bot with YouTube, universal downloader, AI Q&A, and auto status view",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "pm2": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop rex-md",
+    "pm2:logs": "pm2 logs rex-md",
+    "pm2:restart": "pm2 restart rex-md"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@adiwajshing/keyed-db": "^0.2.4",
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.16",
+    "@google/generative-ai": "^0.21.0",
+    "groq-sdk": "^0.9.1",
+    "mongoose": "^8.4.1",
+    "dotenv": "^16.4.5",
+    "pino": "^9.2.0",
+    "pino-pretty": "^11.2.1",
+    "execa": "^8.0.1",
+    "axios": "^1.7.2",
+    "sharp": "^0.33.4",
+    "qrcode-terminal": "^0.12.0",
+    "link-preview-js": "^3.0.5"
+  },
+  "devDependencies": {
+    "pm2": "^5.4.0"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "ai",
+    "youtube",
+    "downloader"
+  ],
+  "author": "REX",
+  "license": "MIT"
+}
