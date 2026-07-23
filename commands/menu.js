@@ -50,6 +50,9 @@ module.exports = {
     text += `💡 Use \`${prefix}help <command>\` for detailed info\n`;
     text += `📌 Prefix: \`${prefix}\``;
 
-    await sock.sendMessage(jid, { text });
+    await sock.sendMessage(jid, { 
+      image: { url: './images/menu_picture.jpeg' },
+      caption: text 
+    });
   },
 };
