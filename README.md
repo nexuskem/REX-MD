@@ -33,8 +33,6 @@ A modern, production-ready WhatsApp assistant bot with YouTube music/video playb
 
 ## 🔧 Prerequisites
 
-Before installing, make sure you have the following on your system:
-
 ### 1. Node.js ≥ 20 LTS
 ```bash
 # Using nvm (recommended)
@@ -44,28 +42,11 @@ nvm use 20
 node --version  # Should be v20.x.x
 ```
 
-### 2. ffmpeg
-```bash
-# Ubuntu/Debian
-sudo apt update && sudo apt install ffmpeg -y
-
-# Verify
-ffmpeg -version
-```
-
-### 3. yt-dlp
-```bash
-# Official install (installs to /usr/local/bin)
-sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-sudo chmod a+rx /usr/local/bin/yt-dlp
-
-# Verify
-yt-dlp --version
-```
-
-### 4. MongoDB URI
+### 2. MongoDB URI
 - **Recommended:** [MongoDB Atlas free tier](https://www.mongodb.com/atlas) — create a cluster and get your connection string
 - **Local:** Install MongoDB and use `mongodb://localhost:27017/rexmd`
+
+> **Note on ffmpeg & yt-dlp:** Both are bundled as npm packages (`ffmpeg-static`, `youtube-dl-exec`). **No system install of ffmpeg or yt-dlp is required** — `npm install` handles them automatically on every platform.
 
 ---
 
@@ -76,7 +57,7 @@ yt-dlp --version
 git clone https://github.com/your-nexuskem/REX-MD.git
 cd REX-MD
 
-# Install dependencies
+# Install dependencies (also downloads ffmpeg and yt-dlp binaries)
 npm install
 
 # Set up environment variables
@@ -113,7 +94,7 @@ With `USE_PAIRING_CODE=true` (the default):
 4. On your phone: **WhatsApp → Settings → Linked Devices → Link a Device → Enter code manually**
 5. The bot will show `✅ Connected as <Your Name>`
 
-> **Session persistence:** Your session is stored in the `./session/` folder locally (or MongoDB in production). Restarting the bot does **not** require re-pairing.
+> **Session persistence:** Your session is stored in MongoDB. Restarting or redeploying does **not** require re-pairing.
 
 ---
 
@@ -165,9 +146,67 @@ With `USE_PAIRING_CODE=true` (the default):
 
 ---
 
-## 🖥️ Deployment (VPS)
+## 🖥️ Deployment
 
-### Using pm2 (Recommended)
+> ⚠️ **One session at a time.** REX-MD's WhatsApp session lives in MongoDB. Never point two deployments at the same `MONGODB_URI` simultaneously — they will fight each other, drop connections, and corrupt the stored session. Pick one primary host.
+
+### Option A — Railway (~$5/mo, recommended)
+
+**Primary platform.** Smooth deploy experience, zero config beyond env vars.
+
+1. Push REX-MD to a GitHub repo (private is fine).
+2. On Railway: **New Project → Deploy from GitHub repo** → select your repo.
+3. Railway auto-detects Node via the `nixpacks.toml` in the repo root and runs `npm install` + `npm start`. ffmpeg and yt-dlp are installed automatically.
+4. **Variables tab** → add every key from `.env.example`.
+5. **Settings → Deploy** → confirm start command is `node index.js`.
+6. No public domain needed — Baileys doesn't serve HTTP.
+
+**Redeploy steps:** push a new commit, or click **Deploy** in the Railway dashboard.
+
+---
+
+### Option B — KataBump (free, 24/7, requires 4-day renewal)
+
+**Best free option.** Hosts any Node app; marketed at Discord bots but works for any `npm start` service.
+
+1. Create an account at [katabump.com](https://katabump.com), create a new server on the **Free** plan.
+2. In **control.katabump.com → Startup tab**, select the Node.js runtime.
+3. Upload the project via the web file manager or SFTP — skip uploading `node_modules`.
+4. Set all env vars from `.env.example` in the panel's Variables/Startup tab.
+5. Confirm the start command is `npm start`, then boot the server.
+6. **Set a calendar reminder every 4 days** — free-tier servers suspend unless manually renewed. Don't rely solely on their email/Discord reminders.
+
+**Resource note:** KataBump Free gives 308 MB RAM and 716 MB disk. Keep `MAX_DOWNLOAD_MB` at 20–25 (not 50) to stay within limits. The bundled ffmpeg/yt-dlp binaries count against disk space.
+
+---
+
+### Option C — GitHub Actions (free for public repos, backup use only)
+
+**Free but imperfect.** GitHub caps jobs at 6 hours; the workflow in `.github/workflows/keepalive.yml` works around this by self-triggering at the 5.5-hour mark. Expect a 1–3 minute reconnect gap each cycle.
+
+**Setup steps:**
+
+1. **Make the repo public** (private repos only get 2,000 free minutes/month — burned in ~2 days running continuously).
+2. Create a classic PAT: **GitHub → Settings → Developer settings → Personal access tokens → Classic** with `repo` + `workflow` scopes.
+3. Add secrets at **Repo → Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `GH_PAT` | The PAT you just created |
+| `MONGODB_URI` | Your MongoDB Atlas URI |
+| `OWNER_NUMBER` | Your WhatsApp number |
+| `GEMINI_API_KEY` | Your Gemini key |
+| `GROQ_API_KEY` | Your Groq key (optional) |
+| `OPENWEATHER_API_KEY` | Weather key (optional) |
+
+4. **First-time pairing:** GitHub Actions has no interactive TTY — pairing code won't work there. Pair your number **locally first** (`USE_PAIRING_CODE=true`, run `node index.js`, complete the pairing), then stop the local bot. The session is now in MongoDB; GitHub Actions will pick it up on first run.
+5. Trigger the workflow: **Actions → REX-MD Keep-Alive Runner → Run workflow**.
+
+**Redeploy steps:** push a commit (the schedule triggers automatically) or manually run the workflow.
+
+---
+
+### Option D — VPS with pm2 (local/self-hosted)
 
 ```bash
 # Install pm2 globally
@@ -183,14 +222,10 @@ pm2 save
 # View logs
 pm2 logs rex-md
 
-# Restart
+# Restart / Stop
 pm2 restart rex-md
-
-# Stop
 pm2 stop rex-md
 ```
-
-### Checking Logs
 
 ```bash
 # Live logs
@@ -202,31 +237,46 @@ tail -f logs/rex-err.log
 
 ---
 
+## 🔐 Where Secrets Go, Per Platform
+
+| Platform | Secret storage location |
+|---|---|
+| Railway | Project → **Variables** tab |
+| KataBump | control.katabump.com → server → **Variables/Startup** tab |
+| GitHub Actions | Repo → **Settings → Secrets and variables → Actions** |
+| VPS / Local | `.env` file (never commit it) |
+
+---
+
 ## 📁 Project Structure
 
 ```
 REX-MD/
-├── index.js               # Entry point
-├── ecosystem.config.js    # pm2 config
+├── index.js                    # Entry point
+├── ecosystem.config.js         # pm2 config
+├── nixpacks.toml               # Railway deployment config
+├── .github/workflows/
+│   └── keepalive.yml           # GitHub Actions self-restarting runner
 ├── /config
-│   └── config.js          # Environment config loader
+│   └── config.js               # Environment config loader
 ├── /core
-│   ├── connection.js      # WhatsApp socket + pairing
-│   ├── commandHandler.js  # Message parsing + routing
-│   └── eventHandler.js    # Status, anti-delete, groups
-├── /commands/             # One file per command
+│   ├── connection.js           # WhatsApp socket + pairing
+│   ├── commandHandler.js       # Message parsing + routing
+│   └── eventHandler.js         # Status, anti-delete, groups
+├── /commands/                  # One file per command
 ├── /features
-│   ├── ai/                # Gemini + Groq clients
-│   ├── downloader/        # yt-dlp + platform detection
-│   └── status/            # Auto status viewer
+│   ├── ai/                     # Gemini + Groq clients
+│   ├── downloader/             # yt-dlp + platform detection
+│   └── status/                 # Auto status viewer
 ├── /database
-│   ├── mongoose.js        # Connection singleton
-│   └── models/            # User, ChatContext, Settings
+│   ├── mongoose.js             # Connection singleton
+│   └── models/                 # User, ChatContext, Settings
 ├── /lib
-│   ├── logger.js          # pino logger
-│   └── cooldown.js        # Per-user cooldown tracker
-├── /temp                  # Gitignored: in-flight downloads
-└── /session               # Gitignored: local auth fallback
+│   ├── binaries.js             # Resolves npm-bundled ffmpeg + yt-dlp paths
+│   ├── logger.js               # pino logger
+│   └── cooldown.js             # Per-user cooldown tracker
+├── /temp                       # Gitignored: in-flight downloads
+└── /session                    # Gitignored: local auth fallback
 ```
 
 ---
@@ -248,14 +298,14 @@ REX-MD/
 | `mongoose` | MongoDB ODM |
 | `@google/generative-ai` | Gemini AI SDK |
 | `groq-sdk` | Groq AI SDK (fallback) |
-| `execa` | Run yt-dlp as child process |
+| `execa` | Run yt-dlp binary as child process |
 | `axios` | HTTP client for weather API |
 | `pino` + `pino-pretty` | Structured logging |
 | `dotenv` | Environment variable loading |
 | `sharp` | Image processing |
 | `qrcode-terminal` | QR code display fallback |
-
-**System dependencies:** `ffmpeg`, `yt-dlp`
+| `ffmpeg-static` | Bundled ffmpeg binary — no system install needed |
+| `youtube-dl-exec` | Bundled yt-dlp binary — no system install needed |
 
 ---
 

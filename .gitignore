@@ -2,7 +2,9 @@
 .env
 
 # WhatsApp session files (stored in MongoDB instead, but keep local fallback out of git)
+# IMPORTANT: Only one deployment should ever run against a given MONGODB_URI at once.
 session/
+/session
 auth_info_baileys/
 
 # Temporary downloaded files

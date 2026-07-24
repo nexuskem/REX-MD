@@ -5,6 +5,7 @@ const fs = require('fs');
 const { execa } = require('execa');
 const config = require('../../config/config');
 const logger = require('../../lib/logger');
+const { ffmpegPath, ytdlpPath } = require('../../lib/binaries');
 
 const TEMP_DIR = path.resolve(__dirname, '../../temp');
 
@@ -74,8 +75,17 @@ function parseDlpError(stderr = '') {
 }
 
 /**
+ * Base yt-dlp args shared by all download functions.
+ * --ffmpeg-location points to the npm-bundled ffmpeg binary so no system
+ * install is needed on Railway, KataBump, GitHub Actions, etc.
+ */
+function baseArgs() {
+  return ['--ffmpeg-location', ffmpegPath];
+}
+
+/**
  * Downloads audio from a YouTube search query or URL.
- * Converts to MP3 via ffmpeg.
+ * Converts to MP3 via the bundled ffmpeg.
  *
  * @param {string} query - Search term or YouTube URL
  * @returns {Promise<{filePath: string, title: string, duration: string, thumbnail: string|null}>}
@@ -94,7 +104,8 @@ async function downloadAudio(query) {
 
   try {
     // First, get metadata
-    const metaResult = await execa('yt-dlp', [
+    const metaResult = await execa(ytdlpPath, [
+      ...baseArgs(),
       '--dump-json',
       '--no-playlist',
       source,
@@ -104,9 +115,9 @@ async function downloadAudio(query) {
     // Metadata fetch is best-effort; continue without it
   }
 
-  let result;
   try {
-    result = await execa('yt-dlp', [
+    await execa(ytdlpPath, [
+      ...baseArgs(),
       '--no-playlist',
       '--extract-audio',
       '--audio-format', 'mp3',
@@ -176,7 +187,12 @@ async function downloadVideo(query) {
 
   let metadata = null;
   try {
-    const metaResult = await execa('yt-dlp', ['--dump-json', '--no-playlist', source]);
+    const metaResult = await execa(ytdlpPath, [
+      ...baseArgs(),
+      '--dump-json',
+      '--no-playlist',
+      source,
+    ]);
     metadata = JSON.parse(metaResult.stdout.split('\n').find((l) => l.trim().startsWith('{')));
   } catch {
     // continue without metadata
@@ -185,9 +201,9 @@ async function downloadVideo(query) {
   // Format selection: best video+audio combo under size limit, merged to mp4
   const formatSelector = `bestvideo[filesize<${maxBytes}]+bestaudio[filesize<${maxBytes}]/best[filesize<${maxBytes}]/bestvideo+bestaudio/best`;
 
-  let result;
   try {
-    result = await execa('yt-dlp', [
+    await execa(ytdlpPath, [
+      ...baseArgs(),
       '--no-playlist',
       '--format', formatSelector,
       '--merge-output-format', 'mp4',
@@ -238,6 +254,7 @@ async function downloadMedia(url, audioOnly = false) {
   const maxBytes = config.maxDownloadMb * 1024 * 1024;
 
   const args = [
+    ...baseArgs(),
     '--no-playlist',
     '--output', path.join(TEMP_DIR, '%(id)s.%(ext)s'),
     '--no-warnings',
@@ -257,7 +274,7 @@ async function downloadMedia(url, audioOnly = false) {
 
   let result;
   try {
-    result = await execa('yt-dlp', args);
+    result = await execa(ytdlpPath, args);
   } catch (err) {
     throw new Error(parseDlpError(err.stderr || ''));
   }

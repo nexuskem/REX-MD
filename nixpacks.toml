@@ -1,0 +1,13 @@
+# nixpacks.toml — Railway deployment configuration
+#
+# ffmpeg and yt-dlp are bundled as npm packages (ffmpeg-static, youtube-dl-exec),
+# so no extra Nix packages are required beyond the Node.js runtime.
+#
+# If ffmpeg-static ever fails on an edge case, uncomment the line below:
+# nixPkgs = ["nodejs_20", "ffmpeg"]
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[start]
+cmd = "node index.js"
