@@ -1,6 +1,10 @@
 'use strict';
 
 const config = require('../config/config');
+const path = require('path');
+const fs = require('fs');
+
+const MENU_IMAGE = path.resolve(__dirname, '../images/menu_picture.jpeg');
 
 module.exports = {
   name: 'menu',
@@ -50,9 +54,14 @@ module.exports = {
     text += `💡 Use \`${prefix}help <command>\` for detailed info\n`;
     text += `📌 Prefix: \`${prefix}\``;
 
-    await sock.sendMessage(jid, { 
-      image: { url: './images/menu_picture.jpeg' },
-      caption: text 
-    });
+    // Send with image if available, otherwise text-only
+    if (fs.existsSync(MENU_IMAGE)) {
+      await sock.sendMessage(jid, {
+        image: { url: MENU_IMAGE },
+        caption: text,
+      });
+    } else {
+      await sock.sendMessage(jid, { text });
+    }
   },
 };

@@ -4,7 +4,7 @@ const config = require('../config/config');
 
 module.exports = {
   name: 'ping',
-  aliases: ['p', 'speed', 'alive'],
+  aliases: ['status', 'speed', 'alive'],
   description: 'Check if REX-MD is online and measure response time',
   usage: '.ping',
   category: '⚙️ System',

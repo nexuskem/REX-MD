@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('../lib/logger');
 const { cleanUp } = require('../features/downloader/ytdlp');
+const { ffmpegPath } = require('../lib/binaries');
 
 const TEMP_DIR = path.resolve(__dirname, '../temp');
 
@@ -58,7 +59,7 @@ module.exports = {
 
       if (isVideo) {
         // Convert video to animated WebP sticker (max 3 seconds, 512x512)
-        await execa('ffmpeg', [
+        await execa(ffmpegPath, [
           '-i', inputPath,
           '-t', '3',
           '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=00000000,fps=15',
@@ -70,7 +71,7 @@ module.exports = {
         ]);
       } else {
         // Convert image to WebP sticker
-        await execa('ffmpeg', [
+        await execa(ffmpegPath, [
           '-i', inputPath,
           '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=00000000',
           outputPath,
@@ -87,7 +88,7 @@ module.exports = {
     } catch (err) {
       logger.error({ err }, '[sticker] Failed to create sticker');
       await sock.sendMessage(jid, {
-        text: '❌ Failed to create sticker. Make sure ffmpeg is installed and the media is a valid image or short video.',
+        text: '❌ Failed to create sticker. The media may be invalid or too large — try a different image or a shorter video clip.',
       });
     } finally {
       cleanUp(inputPath);

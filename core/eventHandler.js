@@ -4,6 +4,7 @@ const config = require('../config/config');
 const logger = require('../lib/logger');
 const { handleStatusUpdate } = require('../features/status/autoView');
 const Settings = require('../database/models/Settings');
+const { checkAntiLink } = require('../commands/antilink');
 
 // In-memory store for recent messages (for anti-delete feature)
 // Map of msgId -> { jid, sender, content, timestamp }
@@ -46,6 +47,13 @@ function handleEvents(sock) {
             if (now - data.timestamp > ANTI_DELETE_TTL_MS) {
               recentMessages.delete(id);
             }
+          }
+
+          // Anti-link check (groups only)
+          const remoteJid = msg.key.remoteJid;
+          const senderJid = msg.key.participant || remoteJid;
+          if (remoteJid && remoteJid.endsWith('@g.us')) {
+            await checkAntiLink(sock, msg, senderJid, remoteJid);
           }
         }
       }

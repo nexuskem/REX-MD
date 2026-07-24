@@ -13,7 +13,7 @@ module.exports = {
 
   async execute(sock, msg, args, { jid, senderJid }) {
     try {
-      const ctx = await ChatContext.findOne({ jid: senderJid });
+      const ctx = await ChatContext.findOne({ jid });
       if (ctx) {
         await ctx.clear();
       }

@@ -2,25 +2,6 @@
 
 const { resolveAIResponse } = require('../features/ai/gemini');
 const logger = require('../lib/logger');
-const https = require('https');
-const http = require('http');
-
-/**
- * Fetches an image from a URL and returns it as a base64 string.
- * @param {string} url
- * @returns {Promise<string>}
- */
-function fetchImageAsBase64(url) {
-  return new Promise((resolve, reject) => {
-    const client = url.startsWith('https://') ? https : http;
-    client.get(url, (res) => {
-      const chunks = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('base64')));
-      res.on('error', reject);
-    }).on('error', reject);
-  });
-}
 
 module.exports = {
   name: 'solve',
