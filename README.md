@@ -73,7 +73,7 @@ yt-dlp --version
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-username/REX-MD.git
+git clone https://github.com/your-nexuskem/REX-MD.git
 cd REX-MD
 
 # Install dependencies
