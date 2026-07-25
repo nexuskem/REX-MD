@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>REX-MD · WhatsApp Pairing</title>
+<meta name="description" content="Pair your WhatsApp account with REX-MD bot using QR code or pairing code."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#0a0f1e;
+    --surface:rgba(255,255,255,.04);
+    --border:rgba(255,255,255,.08);
+    --green:#25d366;
+    --green-dim:rgba(37,211,102,.15);
+    --green-glow:rgba(37,211,102,.3);
+    --text:#f0f4ff;
+    --muted:#8892a4;
+    --danger:#ff4d6d;
+    --radius:20px;
+    --card-shadow:0 24px 64px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%,rgba(37,211,102,.12) 0%,transparent 70%),
+      radial-gradient(ellipse 50% 40% at 90% 90%,rgba(0,120,255,.08) 0%,transparent 60%);
+  }
+
+  /* ── Header ── */
+  .header{text-align:center;margin-bottom:36px}
+  .logo{
+    display:inline-flex;align-items:center;gap:12px;
+    background:var(--green-dim);
+    border:1px solid var(--green-glow);
+    border-radius:50px;
+    padding:10px 22px;
+    margin-bottom:20px;
+  }
+  .logo svg{width:28px;height:28px}
+  .logo span{font-size:1.1rem;font-weight:700;letter-spacing:.5px;color:var(--green)}
+  h1{font-size:2rem;font-weight:800;line-height:1.2;margin-bottom:8px}
+  h1 span{
+    background:linear-gradient(135deg,var(--green),#00e5ff);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent
+  }
+  .subtitle{color:var(--muted);font-size:.95rem}
+
+  /* ── Card ── */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--card-shadow);
+    backdrop-filter:blur(20px);
+    width:100%;max-width:460px;
+    overflow:hidden;
+  }
+
+  /* ── Tabs ── */
+  .tabs{display:flex;border-bottom:1px solid var(--border)}
+  .tab{
+    flex:1;padding:18px 12px;
+    text-align:center;font-size:.9rem;font-weight:600;
+    cursor:pointer;transition:all .25s;
+    color:var(--muted);border-bottom:2px solid transparent;
+    letter-spacing:.3px;
+  }
+  .tab.active{color:var(--green);border-bottom-color:var(--green);background:var(--green-dim)}
+  .tab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.03)}
+
+  /* ── Body ── */
+  .card-body{padding:32px 28px}
+
+  .panel{display:none;animation:fadeIn .3s ease}
+  .panel.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ── Status bar ── */
+  .status-bar{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 16px;border-radius:12px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--border);
+    margin-bottom:24px;font-size:.85rem;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot.idle{background:var(--muted)}
+  .dot.loading{background:#facc15;animation:pulse 1s infinite}
+  .dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .dot.error{background:var(--danger)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ── QR box ── */
+  .qr-wrap{
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+    min-height:220px;justify-content:center;
+  }
+  #qr-img{
+    width:240px;height:240px;border-radius:16px;
+    box-shadow:0 0 0 6px #fff,0 0 0 8px var(--green-glow);
+    display:none;
+  }
+  .qr-placeholder{
+    width:240px;height:240px;border-radius:16px;
+    border:2px dashed var(--border);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:12px;color:var(--muted);font-size:.85rem;
+  }
+  .qr-placeholder svg{width:48px;height:48px;opacity:.3}
+
+  /* ── Pairing code display ── */
+  .code-display{
+    display:none;
+    justify-content:center;gap:8px;margin:20px 0;flex-wrap:wrap;
+  }
+  .code-box{
+    background:rgba(37,211,102,.1);
+    border:1px solid var(--green-glow);
+    border-radius:12px;padding:14px 18px;
+    font-size:1.6rem;font-weight:800;letter-spacing:4px;
+    color:var(--green);font-family:'Courier New',monospace;
+    text-align:center;min-width:100px;
+  }
+  .code-label{
+    text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:20px;line-height:1.5;
+  }
+
+  /* ── Form ── */
+  .form-group{margin-bottom:18px}
+  label{display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.3px}
+  .input-wrap{position:relative}
+  .flag{
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    font-size:1rem;pointer-events:none;
+  }
+  input[type=tel],input[type=text]{
+    width:100%;padding:14px 14px 14px 44px;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--border);
+    border-radius:12px;
+    color:var(--text);font-size:1rem;font-family:'Inter',sans-serif;
+    outline:none;transition:border-color .2s,box-shadow .2s;
+  }
+  input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim)}
+  input::placeholder{color:var(--muted)}
+
+  /* ── Buttons ── */
+  .btn{
+    width:100%;padding:15px;border:none;border-radius:12px;
+    font-size:.95rem;font-weight:700;cursor:pointer;
+    transition:all .2s;letter-spacing:.3px;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#25d366,#128c7e);
+    color:#fff;box-shadow:0 4px 24px rgba(37,211,102,.3);
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(37,211,102,.45)}
+  .btn-primary:active{transform:translateY(0)}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn-ghost{
+    background:rgba(255,255,255,.05);color:var(--muted);
+    border:1px solid var(--border);margin-top:12px;
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,.09);color:var(--text)}
+
+  /* ── Steps ── */
+  .steps{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+  .step{
+    display:flex;align-items:flex-start;gap:12px;
+    background:rgba(255,255,255,.03);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;font-size:.83rem;color:var(--muted);
+  }
+  .step-num{
+    background:var(--green-dim);color:var(--green);
+    border-radius:50%;width:22px;height:22px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.75rem;font-weight:700;flex-shrink:0;margin-top:1px;
+  }
+
+  /* ── Success ── */
+  #success-panel{display:none;text-align:center;padding:32px 28px;animation:fadeIn .4s ease}
+  .check-circle{
+    width:80px;height:80px;border-radius:50%;
+    background:var(--green-dim);border:2px solid var(--green);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 20px;
+    box-shadow:0 0 40px var(--green-glow);
+    animation:pop .4s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  .check-circle svg{width:40px;height:40px;color:var(--green)}
+  #connected-name{font-size:1.2rem;font-weight:700;margin-bottom:8px}
+  .success-sub{color:var(--muted);font-size:.88rem;margin-bottom:24px}
+
+  /* ── Timer ── */
+  .qr-timer{font-size:.78rem;color:var(--muted);text-align:center}
+  .timer-bar{height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+  .timer-fill{height:100%;background:var(--green);border-radius:2px;transition:width 1s linear}
+
+  /* ── Footer ── */
+  .footer{margin-top:28px;text-align:center;color:var(--muted);font-size:.78rem}
+  .footer a{color:var(--green);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <!-- WhatsApp icon -->
+    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="16" fill="#25D366"/>
+      <path d="M23.5 8.5A10.43 10.43 0 0016 5.5a10.5 10.5 0 00-9.1 15.73L5.5 26.5l5.42-1.42A10.5 10.5 0 1023.5 8.5zm-7.5 16.15a8.72 8.72 0 01-4.44-1.22l-.32-.19-3.22.84.86-3.13-.21-.33A8.75 8.75 0 1116 24.65zm4.8-6.55c-.26-.13-1.55-.77-1.79-.85s-.41-.13-.59.13-.67.85-.82 1-.3.2-.57.07a7.16 7.16 0 01-2.1-1.3 7.88 7.88 0 01-1.45-1.8c-.15-.27 0-.41.11-.55s.27-.3.4-.46a1.7 1.7 0 00.27-.45.5.5 0 000-.47c-.07-.13-.59-1.43-.81-1.96s-.43-.44-.59-.45h-.5a1 1 0 00-.71.33 2.94 2.94 0 00-.92 2.19 5.13 5.13 0 001.07 2.72 11.72 11.72 0 004.48 3.97c.63.27 1.12.43 1.5.55a3.6 3.6 0 001.66.1 2.7 2.7 0 001.77-1.25 2.19 2.19 0 00.15-1.25c-.06-.11-.23-.17-.49-.3z" fill="#fff"/>
+    </svg>
+    <span>REX-MD</span>
+  </div>
+  <h1>Link Your <span>WhatsApp</span></h1>
+  <p class="subtitle">Choose QR scan or phone pairing code to connect your bot</p>
+</div>
+
+<div class="card" id="main-card">
+  <div class="tabs">
+    <div class="tab active" id="tab-qr" onclick="switchTab('qr')">📷 QR Code</div>
+    <div class="tab" id="tab-code" onclick="switchTab('code')">🔢 Pairing Code</div>
+  </div>
+
+  <!-- ── QR Panel ── -->
+  <div class="card-body" id="panel-qr">
+    <div class="status-bar">
+      <div class="dot idle" id="qr-dot"></div>
+      <span id="qr-status-text">Click "Generate QR Code" to begin</span>
+    </div>
+
+    <div class="qr-wrap">
+      <div class="qr-placeholder" id="qr-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/>
+          <path d="M14 18h4v4M18 14h4"/>
+        </svg>
+        <span>QR code will appear here</span>
+      </div>
+      <img id="qr-img" alt="WhatsApp QR Code"/>
+    </div>
+
+    <div class="qr-timer" id="qr-timer" style="display:none">
+      QR expires in <strong id="qr-secs">60</strong>s
+      <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-generate" onclick="startQR()" style="margin-top:20px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM17 14h.01M14 17h.01M17 17h4M21 14v4M14 20h4"/>
+      </svg>
+      Generate QR Code
+    </button>
+    <button class="btn btn-ghost" id="btn-qr-reset" onclick="resetSession()" style="display:none">↺ Reset Session</button>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><span>Open WhatsApp on your phone</span></div>
+      <div class="step"><div class="step-num">2</div><span>Go to <strong>Settings → Linked Devices → Link a Device</strong></span></div>
+      <div class="step"><div class="step-num">3</div><span>Point your camera at the QR code above</span></div>
+    </div>
+  </div>
+
+  <!-- ── Code Panel ── -->
+  <div class="card-body panel" id="panel-code">
+    <div class="status-bar">
+      <div class="dot idle" id="code-dot"></div>
+      <span id="code-status-text">Enter your number to get a pairing code</span>
+    </div>
+
+    <div class="form-group">
+      <label>WHATSAPP NUMBER (with country code, no +)</label>
+      <div class="input-wrap">
+        <span class="flag">📱</span>
+        <input type="tel" id="phone-input" placeholder="e.g. 2547XXXXXXXX" maxlength="15"
+               oninput="this.value=this.value.replace(/\D/g,'')"/>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-code" onclick="requestCode()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+      </svg>
+      Get Pairing Code
+    </button>
+    <button class="btn btn-ghost" id="btn-code-reset" onclick="resetSession()" style="display:none">↺ Reset Session</button>
+
+    <div class="code-label" id="code-label" style="display:none">
+      Enter this code in WhatsApp → Linked Devices → Link a Device → Enter code manually
+    </div>
+    <div class="code-display" id="code-display">
+      <div class="code-box" id="code-part1">----</div>
+      <div style="font-size:1.6rem;font-weight:800;color:var(--muted);align-self:center">–</div>
+      <div class="code-box" id="code-part2">----</div>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><span>Enter your WhatsApp number above</span></div>
+      <div class="step"><div class="step-num">2</div><span>Open WhatsApp → <strong>Settings → Linked Devices → Link a Device</strong></span></div>
+      <div class="step"><div class="step-num">3</div><span>Tap <strong>"Link with phone number"</strong> and enter the code shown</span></div>
+    </div>
+  </div>
+
+  <!-- ── Success Panel ── -->
+  <div id="success-panel">
+    <div class="check-circle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+    </div>
+    <div id="connected-name">WhatsApp Connected!</div>
+    <p class="success-sub">REX-MD is now linked and active 🎉</p>
+    <button class="btn btn-ghost" onclick="resetSession()">🔗 Link a different account</button>
+  </div>
+</div>
+
+<div class="footer">
+  Powered by <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> ·
+  REX-MD © 2025
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let ws, currentTab = 'qr', timerInterval, timerSecs = 60;
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}`);
+
+    ws.onopen  = () => console.log('[ws] connected');
+    ws.onclose = () => { setTimeout(connectWS, 3000); };
+    ws.onmessage = e => handleMsg(JSON.parse(e.data));
+  }
+
+  function handleMsg(msg) {
+    console.log('[ws]', msg);
+    switch (msg.type) {
+      case 'info':
+        if (msg.connected) showSuccess(msg.name || 'Bot');
+        break;
+      case 'qr':
+        showQR(msg.image);
+        break;
+      case 'pairing_code':
+        showCode(msg.code);
+        break;
+      case 'connected':
+        showSuccess(msg.name || 'Bot');
+        break;
+      case 'disconnected':
+        setStatus('qr', 'idle', 'Disconnected. Try again.');
+        setStatus('code', 'idle', 'Disconnected. Try again.');
+        break;
+      case 'logged_out':
+        setStatus('qr', 'error', 'Logged out — session cleared');
+        setStatus('code', 'error', 'Logged out — session cleared');
+        break;
+      case 'error':
+        setStatus('qr', 'error', '⚠ ' + msg.message);
+        setStatus('code', 'error', '⚠ ' + msg.message);
+        break;
+    }
+  }
+
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-qr').classList.toggle('active', tab === 'qr');
+    document.getElementById('tab-code').classList.toggle('active', tab === 'code');
+    document.getElementById('panel-qr').classList.toggle('active', tab === 'qr');
+    document.getElementById('panel-code').classList.toggle('active', tab === 'code');
+    // hide panel-qr/panel-code from default block; panel class handles display
+    document.getElementById('panel-qr').style.display   = tab === 'qr'   ? 'block' : 'none';
+    document.getElementById('panel-code').style.display = tab === 'code' ? 'block' : 'none';
+  }
+
+  // ── Status helper ──────────────────────────────────────────────────────────
+  function setStatus(panel, state, text) {
+    const dot  = document.getElementById(`${panel}-dot`);
+    const span = document.getElementById(`${panel}-status-text`);
+    dot.className  = `dot ${state}`;
+    span.textContent = text;
+  }
+
+  // ── QR flow ────────────────────────────────────────────────────────────────
+  async function startQR() {
+    document.getElementById('btn-generate').disabled = true;
+    setStatus('qr', 'loading', 'Generating QR code…');
+    resetTimer();
+
+    try {
+      const r = await fetch('/api/start-qr', { method: 'POST' });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+    } catch(e) {
+      setStatus('qr', 'error', '⚠ ' + e.message);
+      document.getElementById('btn-generate').disabled = false;
+    }
+  }
+
+  function showQR(dataUrl) {
+    const img  = document.getElementById('qr-img');
+    const ph   = document.getElementById('qr-placeholder');
+    img.src    = dataUrl;
+    img.style.display = 'block';
+    ph.style.display  = 'none';
+    setStatus('qr', 'loading', 'Scan with WhatsApp — waiting…');
+    document.getElementById('btn-qr-reset').style.display = 'block';
+    startQRTimer();
+  }
+
+  // ── QR timer ──────────────────────────────────────────────────────────────
+  function startQRTimer() {
+    timerSecs = 60;
+    document.getElementById('qr-timer').style.display = 'block';
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timerSecs--;
+      document.getElementById('qr-secs').textContent = timerSecs;
+      document.getElementById('timer-fill').style.width = (timerSecs / 60 * 100) + '%';
+      if (timerSecs <= 0) {
+        clearInterval(timerInterval);
+        setStatus('qr', 'idle', 'QR expired — generate a new one');
+        document.getElementById('btn-generate').disabled = false;
+        document.getElementById('qr-timer').style.display = 'none';
+      }
+    }, 1000);
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    document.getElementById('qr-timer').style.display = 'none';
+    document.getElementById('qr-img').style.display = 'none';
+    document.getElementById('qr-placeholder').style.display = 'flex';
+  }
+
+  // ── Pairing code flow ──────────────────────────────────────────────────────
+  async function requestCode() {
+    const phone = document.getElementById('phone-input').value.trim();
+    if (!phone || phone.length < 7) {
+      setStatus('code', 'error', 'Enter a valid number with country code');
+      return;
+    }
+    document.getElementById('btn-code').disabled = true;
+    setStatus('code', 'loading', 'Requesting pairing code…');
+
+    try {
+      const r = await fetch('/api/request-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+    } catch(e) {
+      setStatus('code', 'error', '⚠ ' + e.message);
+      document.getElementById('btn-code').disabled = false;
+    }
+  }
+
+  function showCode(code) {
+    // Format: "ABCD-EFGH" or "ABCDEFGH"
+    const clean = code.replace(/[-\s]/g, '');
+    const a = clean.slice(0, 4);
+    const b = clean.slice(4, 8) || clean.slice(4);
+    document.getElementById('code-part1').textContent = a;
+    document.getElementById('code-part2').textContent = b || '----';
+    document.getElementById('code-display').style.display = 'flex';
+    document.getElementById('code-label').style.display   = 'block';
+    document.getElementById('btn-code-reset').style.display = 'block';
+    setStatus('code', 'loading', 'Enter this code in WhatsApp now');
+  }
+
+  // ── Success ────────────────────────────────────────────────────────────────
+  function showSuccess(name) {
+    clearInterval(timerInterval);
+    document.getElementById('main-card').innerHTML = document.getElementById('success-panel').outerHTML;
+    const sp = document.getElementById('success-panel');
+    sp.style.display = 'block';
+    const nm = document.getElementById('connected-name');
+    if (nm) nm.textContent = `✅ Connected as ${name}`;
+  }
+
+  // ── Reset ──────────────────────────────────────────────────────────────────
+  async function resetSession() {
+    await fetch('/api/reset', { method: 'POST' });
+    location.reload();
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    // Default tab layout
+    document.getElementById('panel-qr').style.display   = 'block';
+    document.getElementById('panel-code').style.display = 'none';
+    connectWS();
+  });
+</script>
+</body>
+</html>
