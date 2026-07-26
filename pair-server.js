@@ -1,5 +1,7 @@
 'use strict';
 
+const { spawn } = require('child_process');
+
 /**
  * REX-MD Pairing Server
  * Serves the pairing web UI and bridges Baileys QR / pairing-code events
@@ -125,7 +127,28 @@ async function startSession(mode = 'qr', phone = null) {
     if (connection === 'open') {
       isConnected = true;
       broadcast({ type: 'connected', name: sock.user?.name || sock.user?.id });
-      logger.info('[pair-server] ✅ WhatsApp connected');
+      logger.info('[pair-server] ✅ WhatsApp connected — handing off to main bot in 3s...');
+
+      // Close WS connection so main bot can take over the session cleanly
+      setTimeout(() => {
+        try { sock.ev.removeAllListeners(); sock.ws.close(); } catch {}
+        sock = null;
+
+        // Launch the main bot
+        const bot = spawn('node', ['index.js'], {
+          cwd: __dirname,
+          stdio: 'inherit',
+          detached: true,
+        });
+        bot.unref();
+        logger.info('[pair-server] 🚀 Main bot launched (index.js)');
+
+        // Give browser a moment to show success, then exit pair server
+        setTimeout(() => {
+          logger.info('[pair-server] Pair server exiting — bot is running.');
+          process.exit(0);
+        }, 2000);
+      }, 3000);
     }
 
     if (connection === 'close') {
