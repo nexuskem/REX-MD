@@ -11,7 +11,8 @@
     "pm2:stop": "pm2 stop rex-md",
     "pm2:logs": "pm2 logs rex-md",
     "pm2:restart": "pm2 restart rex-md",
-    "pair": "node pair-server.js"
+    "pair": "node pair-server.js",
+    "deploy": "node deploy-server.js"
   },
   "engines": {
     "node": ">=20.0.0"

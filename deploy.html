@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>REX-MD · Deploy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0f1e;--surface:rgba(255,255,255,.05);--border:rgba(255,255,255,.09);
+  --green:#25d366;--green-dim:rgba(37,211,102,.14);--green-glow:rgba(37,211,102,.3);
+  --text:#f0f4ff;--muted:#8892a4;--danger:#ff4d6d;--warn:#facc15;
+  --radius:18px;--card-shadow:0 24px 60px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  padding:0;background-image:
+  radial-gradient(ellipse 80% 50% at 50% -10%,rgba(37,211,102,.1) 0%,transparent 70%),
+  radial-gradient(ellipse 40% 40% at 90% 90%,rgba(0,120,255,.07) 0%,transparent 60%);}
+
+/* ── Layout ── */
+.shell{max-width:480px;margin:0 auto;padding:24px 16px 48px;}
+.logo-bar{display:flex;align-items:center;gap:10px;margin-bottom:32px;justify-content:center;}
+.logo-icon{width:36px;height:36px;background:var(--green-dim);border:1px solid var(--green-glow);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:22px;height:22px;}
+.logo-text{font-size:1.3rem;font-weight:800;letter-spacing:.5px;
+  background:linear-gradient(135deg,var(--green),#00e5ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+
+/* ── Steps indicator ── */
+.steps-bar{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:32px;}
+.step-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;
+  color:var(--muted);transition:all .3s;flex-shrink:0;}
+.step-dot.active{border-color:var(--green);background:var(--green-dim);color:var(--green);}
+.step-dot.done{border-color:var(--green);background:var(--green);color:#fff;}
+.step-line{width:40px;height:2px;background:var(--border);transition:background .3s;}
+.step-line.done{background:var(--green);}
+
+/* ── Card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--card-shadow);backdrop-filter:blur(20px);overflow:hidden;}
+.card-head{padding:24px 24px 0;}
+.card-head h2{font-size:1.3rem;font-weight:800;margin-bottom:6px;}
+.card-head p{color:var(--muted);font-size:.88rem;line-height:1.5;}
+.card-body{padding:24px;}
+
+/* ── Form ── */
+.field{margin-bottom:18px;}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);
+  margin-bottom:7px;letter-spacing:.3px;text-transform:uppercase;}
+.field input,.field textarea{width:100%;padding:13px 14px;background:rgba(255,255,255,.05);
+  border:1px solid var(--border);border-radius:12px;color:var(--text);
+  font-size:.95rem;font-family:'Inter',sans-serif;outline:none;
+  transition:border-color .2s,box-shadow .2s;resize:none;}
+.field input:focus,.field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-dim);}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted);}
+.field-hint{font-size:.75rem;color:var(--muted);margin-top:5px;}
+.field-hint a{color:var(--green);text-decoration:none;}
+
+/* ── Buttons ── */
+.btn{width:100%;padding:15px;border:none;border-radius:12px;font-size:.95rem;
+  font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;
+  display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-primary{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;
+  box-shadow:0 4px 24px rgba(37,211,102,.3);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(37,211,102,.45);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-ghost{background:rgba(255,255,255,.05);color:var(--muted);
+  border:1px solid var(--border);margin-top:12px;}
+.btn-ghost:hover{background:rgba(255,255,255,.09);color:var(--text);}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);
+  border:1px solid rgba(255,77,109,.25);margin-top:12px;}
+.btn-danger:hover{background:rgba(255,77,109,.2);}
+
+/* ── Status bar ── */
+.status-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;
+  border-radius:11px;background:rgba(255,255,255,.04);border:1px solid var(--border);
+  margin-bottom:20px;font-size:.84rem;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot.idle{background:var(--muted);}
+.dot.loading{background:var(--warn);animation:pulse 1s infinite;}
+.dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+.dot.error{background:var(--danger);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── QR ── */
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0;}
+#qr-img{width:260px;height:260px;border-radius:14px;
+  box-shadow:0 0 0 6px #fff,0 0 0 8px var(--green-glow);display:none;}
+.qr-placeholder{width:260px;height:260px;border-radius:14px;border:2px dashed var(--border);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;color:var(--muted);font-size:.85rem;}
+.qr-placeholder svg{width:48px;height:48px;opacity:.25;}
+.qr-timer{font-size:.78rem;color:var(--muted);text-align:center;width:100%;}
+.timer-bar{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
+.timer-fill{height:100%;background:var(--green);border-radius:2px;transition:width 1s linear;}
+
+/* ── Success Dashboard ── */
+.dashboard{display:none;}
+.check-circle{width:80px;height:80px;border-radius:50%;
+  background:var(--green-dim);border:2px solid var(--green);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
+  box-shadow:0 0 40px var(--green-glow);animation:pop .4s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.check-circle svg{width:40px;height:40px;}
+.dashboard-name{font-size:1.2rem;font-weight:700;text-align:center;margin-bottom:4px;}
+.dashboard-sub{color:var(--muted);font-size:.85rem;text-align:center;margin-bottom:24px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.stat{background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:12px;padding:14px;text-align:center;}
+.stat-val{font-size:1.4rem;font-weight:800;color:var(--green);}
+.stat-label{font-size:.72rem;color:var(--muted);margin-top:3px;}
+.cmd-list{background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:12px;padding:14px;font-size:.82rem;color:var(--muted);line-height:2;}
+
+/* ── Steps panels ── */
+.panel{display:none;}
+.panel.active{display:block;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Divider ── */
+.divider{height:1px;background:var(--border);margin:20px 0;}
+
+/* ── Alert ── */
+.alert{padding:12px 14px;border-radius:11px;font-size:.83rem;
+  display:none;margin-bottom:16px;line-height:1.5;}
+.alert.error{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:var(--danger);}
+.alert.warn{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.25);color:var(--warn);}
+.alert.success{background:var(--green-dim);border:1px solid var(--green-glow);color:var(--green);}
+
+/* ── Footer ── */
+.footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:24px;}
+.footer a{color:var(--green);text-decoration:none;}
+
+/* ── Spinner ── */
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Logo -->
+  <div class="logo-bar">
+    <div class="logo-icon">
+      <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#25D366"/>
+      <path d="M23.5 8.5A10.43 10.43 0 0016 5.5a10.5 10.5 0 00-9.1 15.73L5.5 26.5l5.42-1.42A10.5 10.5 0 1023.5 8.5zm-7.5 16.15a8.72 8.72 0 01-4.44-1.22l-.32-.19-3.22.84.86-3.13-.21-.33A8.75 8.75 0 1116 24.65zm4.8-6.55c-.26-.13-1.55-.77-1.79-.85s-.41-.13-.59.13-.67.85-.82 1-.3.2-.57.07a7.16 7.16 0 01-2.1-1.3 7.88 7.88 0 01-1.45-1.8c-.15-.27 0-.41.11-.55s.27-.3.4-.46a1.7 1.7 0 00.27-.45.5.5 0 000-.47c-.07-.13-.59-1.43-.81-1.96s-.43-.44-.59-.45h-.5a1 1 0 00-.71.33 2.94 2.94 0 00-.92 2.19 5.13 5.13 0 001.07 2.72 11.72 11.72 0 004.48 3.97c.63.27 1.12.43 1.5.55a3.6 3.6 0 001.66.1 2.7 2.7 0 001.77-1.25 2.19 2.19 0 00.15-1.25c-.06-.11-.23-.17-.49-.3z" fill="#fff"/>
+      </svg>
+    </div>
+    <span class="logo-text">REX-MD Deploy</span>
+  </div>
+
+  <!-- Step indicators -->
+  <div class="steps-bar">
+    <div class="step-dot active" id="sd1">1</div>
+    <div class="step-line" id="sl1"></div>
+    <div class="step-dot" id="sd2">2</div>
+    <div class="step-line" id="sl2"></div>
+    <div class="step-dot" id="sd3">3</div>
+  </div>
+
+  <!-- ── STEP 1: CONFIG ── -->
+  <div class="panel active" id="panel-config">
+    <div class="card">
+      <div class="card-head">
+        <h2>⚙️ Bot Configuration</h2>
+        <p>Fill in your details to deploy REX-MD. Takes less than 2 minutes.</p>
+      </div>
+      <div class="card-body">
+        <div class="alert" id="config-alert"></div>
+
+        <div class="field">
+          <label>Your WhatsApp Number</label>
+          <input type="tel" id="ownerNumber" placeholder="2547XXXXXXXX (no +)" maxlength="15"
+            oninput="this.value=this.value.replace(/\D/g,'')"/>
+          <div class="field-hint">Country code included e.g. 254712345678</div>
+        </div>
+
+        <div class="field">
+          <label>Bot Name</label>
+          <input type="text" id="botName" placeholder="REX-MD" value="REX-MD"/>
+        </div>
+
+        <div class="field">
+          <label>Command Prefix</label>
+          <input type="text" id="prefix" placeholder="." value="." maxlength="3"/>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label>MongoDB URI</label>
+          <input type="text" id="mongoUri" placeholder="mongodb+srv://user:pass@cluster.mongodb.net/rexmd"/>
+          <div class="field-hint">Free at <a href="https://mongodb.com/atlas" target="_blank">mongodb.com/atlas</a></div>
+        </div>
+
+        <div class="field">
+          <label>Gemini API Key</label>
+          <input type="text" id="geminiKey" placeholder="AIza..."/>
+          <div class="field-hint">Free at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-deploy" onclick="deploy()">
+          🚀 Deploy My Bot
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: QR SCAN ── -->
+  <div class="panel" id="panel-qr">
+    <div class="card">
+      <div class="card-head">
+        <h2>📱 Link WhatsApp</h2>
+        <p>Scan this QR code with WhatsApp on your phone.</p>
+      </div>
+      <div class="card-body">
+        <div class="status-bar">
+          <div class="dot loading" id="qr-dot"></div>
+          <span id="qr-status">Starting bot, please wait…</span>
+        </div>
+
+        <div class="qr-wrap">
+          <div class="qr-placeholder" id="qr-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/>
+              <path d="M14 18h4v4M18 14h4"/>
+            </svg>
+            <span>QR code loading…</span>
+          </div>
+          <img id="qr-img" alt="WhatsApp QR"/>
+        </div>
+
+        <div id="qr-timer-wrap" style="display:none" class="qr-timer">
+          Expires in <strong id="qr-secs">60</strong>s
+          <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
+        </div>
+
+        <div class="divider"></div>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.7;text-align:center">
+          WhatsApp → <strong>Settings</strong> → <strong>Linked Devices</strong><br>
+          → <strong>Link a Device</strong> → scan QR above
+        </p>
+
+        <button class="btn btn-ghost" onclick="goBack()">← Change Config</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: DASHBOARD ── -->
+  <div class="panel" id="panel-dash">
+    <div class="card">
+      <div class="card-body" style="text-align:center;padding-top:32px;">
+        <div class="check-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <div class="dashboard-name" id="dash-name">REX-MD is Live! 🎉</div>
+        <div class="dashboard-sub" id="dash-sub">Your bot is running and ready</div>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-val" id="stat-cmds">22</div><div class="stat-label">Commands</div></div>
+          <div class="stat"><div class="stat-val">ON</div><div class="stat-label">Status</div></div>
+        </div>
+
+        <div class="cmd-list">
+          <strong style="color:var(--text)">Quick test commands:</strong><br>
+          <span id="pref">.</span>menu · <span id="pref2">.</span>ping · <span id="pref3">.</span>ai hello
+        </div>
+
+        <div class="divider"></div>
+        <button class="btn btn-ghost" onclick="restart()">🔄 Restart Bot</button>
+        <button class="btn btn-danger" onclick="resetAll()">🗑️ Unlink & Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Powered by <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> ·
+    REX-MD © 2025
+  </div>
+</div>
+
+<script>
+// ── State ──
+let ws, timerInterval, timerSecs = 60;
+let currentPrefix = '.';
+
+// ── WebSocket ──
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.onopen = () => console.log('[ws] open');
+  ws.onclose = () => setTimeout(connectWS, 3000);
+  ws.onmessage = e => handle(JSON.parse(e.data));
+}
+
+function handle(msg) {
+  console.log('[ws]', msg);
+  switch(msg.type) {
+    case 'info':
+      if (msg.connected) showDash(msg.connectedAs);
+      break;
+    case 'bot_starting':
+      setQRStatus('loading','Starting bot process…');
+      break;
+    case 'qr':
+      showQR(msg.image);
+      break;
+    case 'connected':
+      showDash(msg.name);
+      break;
+    case 'logged_out':
+      setQRStatus('error','Logged out — please reset and re-deploy');
+      break;
+    case 'error':
+      showAlert('config-alert', 'error', '⚠️ ' + msg.message);
+      goBack();
+      break;
+    case 'bot_exit':
+      setQRStatus('error','Bot stopped unexpectedly. Try restarting.');
+      break;
+    case 'reset':
+      location.reload();
+      break;
+  }
+}
+
+// ── Deploy (Step 1 → 2) ──
+async function deploy() {
+  const ownerNumber = document.getElementById('ownerNumber').value.trim();
+  const mongoUri    = document.getElementById('mongoUri').value.trim();
+  const geminiKey   = document.getElementById('geminiKey').value.trim();
+  const botName     = document.getElementById('botName').value.trim() || 'REX-MD';
+  const prefix      = document.getElementById('prefix').value.trim() || '.';
+
+  if (!ownerNumber || ownerNumber.length < 9) return showAlert('config-alert','error','Enter a valid WhatsApp number with country code');
+  if (!mongoUri.startsWith('mongodb')) return showAlert('config-alert','error','Enter a valid MongoDB URI');
+  if (!geminiKey) return showAlert('config-alert','error','Enter your Gemini API key');
+
+  currentPrefix = prefix;
+  const btn = document.getElementById('btn-deploy');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div> Deploying…';
+
+  try {
+    const r = await fetch('/api/deploy', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ownerNumber, mongoUri, geminiKey, botName, prefix }),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    goStep(2);
+  } catch(e) {
+    showAlert('config-alert','error','❌ ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Deploy My Bot';
+  }
+}
+
+// ── QR ──
+function showQR(dataUrl) {
+  const img = document.getElementById('qr-img');
+  const ph  = document.getElementById('qr-placeholder');
+  img.src   = dataUrl;
+  img.style.display = 'block';
+  ph.style.display  = 'none';
+  setQRStatus('loading','Scan with WhatsApp — waiting for confirmation…');
+  startTimer();
+}
+
+function startTimer() {
+  timerSecs = 60;
+  document.getElementById('qr-timer-wrap').style.display = 'block';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSecs--;
+    document.getElementById('qr-secs').textContent = timerSecs;
+    document.getElementById('timer-fill').style.width = (timerSecs/60*100)+'%';
+    if (timerSecs <= 0) {
+      clearInterval(timerInterval);
+      setQRStatus('loading','QR expired — new one loading…');
+      document.getElementById('qr-timer-wrap').style.display = 'none';
+      document.getElementById('qr-img').style.display = 'none';
+      document.getElementById('qr-placeholder').style.display = 'flex';
+      document.querySelector('.qr-placeholder span').textContent = 'New QR loading…';
+    }
+  }, 1000);
+}
+
+function setQRStatus(state, text) {
+  const dot  = document.getElementById('qr-dot');
+  const span = document.getElementById('qr-status');
+  dot.className = 'dot ' + state;
+  span.textContent = text;
+}
+
+// ── Dashboard ──
+function showDash(name) {
+  clearInterval(timerInterval);
+  document.getElementById('dash-name').textContent = `✅ Connected as ${name || 'REX-MD'}`;
+  document.getElementById('dash-sub').textContent  = 'Your bot is live and responding!';
+  ['pref','pref2','pref3'].forEach(id => {
+    document.getElementById(id).textContent = currentPrefix;
+  });
+  goStep(3);
+}
+
+// ── Nav ──
+function goStep(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(['','panel-config','panel-qr','panel-dash'][n]).classList.add('active');
+
+  // step dots
+  for (let i = 1; i <= 3; i++) {
+    const dot  = document.getElementById('sd'+i);
+    const line = document.getElementById('sl'+(i));
+    dot.classList.remove('active','done');
+    if (line) line.classList.remove('done');
+    if (i < n) dot.classList.add('done');
+    else if (i === n) dot.classList.add('active');
+    if (line && i < n) line.classList.add('done');
+  }
+}
+
+function goBack() { goStep(1); }
+
+// ── Actions ──
+async function restart() {
+  await fetch('/api/restart', { method:'POST' });
+  goStep(2);
+  setQRStatus('loading','Restarting bot…');
+}
+
+async function resetAll() {
+  if (!confirm('This will unlink WhatsApp and clear your session. Continue?')) return;
+  await fetch('/api/reset', { method:'POST' });
+}
+
+// ── Alert ──
+function showAlert(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'alert ' + type;
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display='none'; }, 6000);
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async () => {
+  connectWS();
+
+  // Pre-fill saved config
+  try {
+    const r = await fetch('/api/config');
+    const d = await r.json();
+    if (d.ownerNumber) document.getElementById('ownerNumber').value = d.ownerNumber;
+    if (d.mongoUri && !d.mongoUri.includes('user:password')) document.getElementById('mongoUri').value = d.mongoUri;
+    if (d.botName) document.getElementById('botName').value = d.botName;
+    if (d.prefix) document.getElementById('prefix').value = d.prefix;
+    currentPrefix = d.prefix || '.';
+
+    if (d.connected) { showDash(d.connectedAs); return; }
+    if (d.configured) {
+      // Already configured, skip to QR step
+      goStep(2);
+      setQRStatus('loading','Bot starting, QR loading…');
+    }
+  } catch {}
+});
+</script>
+</body>
+</html>
