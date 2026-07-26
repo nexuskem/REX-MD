@@ -28,6 +28,7 @@
     "ffmpeg-static": "^5.2.0",
     "groq-sdk": "^0.9.1",
     "link-preview-js": "^3.0.5",
+    "mongodb": "^7.5.0",
     "mongoose": "^8.4.1",
     "pino": "^9.2.0",
     "pino-pretty": "^11.2.1",
