@@ -9,6 +9,7 @@ const {
   Browsers,
 } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
+const qrTerminal = require('qrcode-terminal');
 const readline = require('readline');
 const path = require('path');
 const fs = require('fs');
@@ -61,13 +62,13 @@ async function startConnection() {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
-    printQRInTerminal: !config.usePairingCode,
+    printQRInTerminal: false,
     browser: Browsers.ubuntu('REX-MD'),
     logger: logger.child({ module: 'baileys' }),
     syncFullHistory: false,
-    markOnlineOnConnect: false, // Stealth: don't show online when bot connects
+    markOnlineOnConnect: false,
     generateHighQualityLinkPreview: true,
-    getMessage: async () => undefined, // return undefined for message retry store (we don't store)
+    getMessage: async () => undefined,
   });
 
   // --- Pairing Code Auth ---
@@ -95,6 +96,16 @@ async function startConnection() {
 
     if (qr) {
       logger.info('[conn] QR code generated — scan with WhatsApp');
+      // Render QR in terminal
+      qrTerminal.generate(qr, { small: true }, (qrString) => {
+        console.log('\n\n' + qrString + '\n');
+        console.log('📱 Scan the QR code above with WhatsApp to link REX-MD\n');
+      });
+      // Also write raw QR data to file so pair-server can display it in browser
+      try {
+        const qrFile = path.resolve(__dirname, '../session/.qr_pending');
+        fs.writeFileSync(qrFile, qr, 'utf8');
+      } catch {}
     }
 
     if (connection === 'close') {
