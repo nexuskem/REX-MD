@@ -68,12 +68,13 @@ function handleMessages(sock) {
  * Core message processor — parses, validates, routes, and dispatches commands.
  */
 async function processMessage(sock, msg) {
-  // Ignore messages with no content, from self, or from broadcast
+  // Ignore messages with no content or from broadcast
   if (!msg.message) return;
-  if (msg.key.fromMe) return;
-
+  // Allow fromMe only if it starts with the prefix (owner sending commands)
+  // but ignore status@broadcast self-messages
   const jid = msg.key.remoteJid;
   if (!jid) return;
+  if (jid === 'status@broadcast') return;
 
   // Get settings (prefix may have been changed at runtime)
   const settings = await Settings.getSettings();
