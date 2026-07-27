@@ -52,8 +52,10 @@ function handleMessages(sock) {
   loadCommands();
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
-
+    logger.debug(`[cmd] messages.upsert fired — type=${type}, count=${messages.length}`);
+    // Accept both 'notify' (new msgs) and 'append' (history sync)
+    // Previously, only 'notify' was accepted — but after an init-query
+    // timeout Baileys may deliver messages under a different type.
     for (const msg of messages) {
       try {
         await processMessage(sock, msg);
@@ -87,9 +89,14 @@ async function processMessage(sock, msg) {
     msg.message?.imageMessage?.caption ||
     msg.message?.videoMessage?.caption ||
     msg.message?.documentMessage?.caption ||
+    msg.message?.buttonsResponseMessage?.selectedButtonId ||
+    msg.message?.templateButtonReplyMessage?.selectedId ||
+    msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId ||
     '';
 
+  if (!body) return;
   if (!body.startsWith(prefix)) return;
+  logger.info(`[cmd] Incoming command from ${msg.pushName || jid}: ${body}`);
 
   const senderJid = msg.key.participant || jid;
   const ownerJid = `${config.ownerNumber}@s.whatsapp.net`;

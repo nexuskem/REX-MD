@@ -68,7 +68,11 @@ async function startConnection() {
     syncFullHistory: false,
     markOnlineOnConnect: false,
     generateHighQualityLinkPreview: true,
-    getMessage: async () => undefined,
+    getMessage: async (key) => {
+      // Return undefined — Baileys will re-request from sender
+      // This prevents crashes when decrypting group messages after reconnect
+      return { conversation: '' };
+    },
   });
 
   // --- Pairing Code Auth ---
